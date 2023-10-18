@@ -1,0 +1,46 @@
+version: '3.3'
+services:
+  chainlink-postgresql:
+    image: kartoza/postgis:15-3.3
+    volumes:
+      - ${DB_PATH}/:/opt/postgres/data
+    environment:
+      ALLOW_IP_RANGE: 0.0.0.0/0
+      DEFAULT_ENCODING: UTF8
+      POSTGRES_DBNAME: ${DATABASE}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASS: ${DB_PASSWORD}
+      POSTGRES_MULTIPLE_EXTENSIONS: postgis,hstore,postgis_topology,postgis_raster,pgrouting
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - '36432:5432'
+    restart: on-failure
+    healthcheck:
+      test: 'exit 0'
+    networks:
+      - chainlink
+
+  chainlink-node:
+    image: smartcontract/chainlink:1.3.0
+    environment:
+      ROOT: ${ROOT}
+      LOG_LEVEL: ${LOG_LEVEL}
+      ETH_CHAIN_ID: ${ETH_CHAIN_ID}
+      CHAINLINK_TLS_PORT: ${CHAINLINK_TLS_PORT}
+      SECURE_COOKIES: ${SECURE_COOKIES}
+      ALLOW_ORIGINS: ${ALLOW_ORIGINS}
+      ETH_URL: ${ETH_URL}
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      - chainlink-postgresql
+    restart: on-failure
+    ports:
+      - '6688:6688'
+    volumes:
+      - ${CHAINLINK_DATA}/:/chainlink/
+    command: node start --password /chainlink/chainlink-password.txt --api /chainlink/chainlink-credentials.txt
+    networks:
+      - chainlink
+
+networks:
+  chainlink:
